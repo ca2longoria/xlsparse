@@ -180,8 +180,14 @@ if __name__ == '__main__':
 		if outtype == 'csv':
 			# In case of delims (,) within strings, enquote that particular value.
 			def enquote(s):
-				return ('"%s"' % (s,)) if delim in s else s
+				#s = s.encode('utf-8').decode('utf-8')
+				return ('"%s"' % (
+					re.sub(r'"','\\"',s),) # escape quote chars if inserting quotes.
+				) if delim in s else s
 			r = list(map(enquote,r))
-		print(delim.join(r))
+		try:
+			print(delim.join(r))
+		except UnicodeEncodeError:
+			print(delim.join(map(lambda s:s.encode('utf-8'),r)))
 	
 
