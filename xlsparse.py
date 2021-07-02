@@ -16,17 +16,33 @@ def _cell(s):
 	return (x,int(b)-1) # b-1 for zero-index position
 
 class XLSFile:
+	'''
+	An object targeting an xlsx file, able to iterate over cells or rows.
+	'''
 	def __init__(self,target):
 		self.target = target
 	
+	def sheets(self):
+		'''
+		Return a list of sheet indices.
+		'''
+		with zipfile.ZipFile(self.target) as z:
+			r = []
+			for s in z.namelist():
+				m = re.search(r'/sheet(\d+).xml',s)
+				if m:
+					r.append(int(m.group(1)))
+			return sorted(r)
+
 	def rows(self,sheet):
 		'''
 		Iterate through sheet rows.
 		
-		Note that the rows do not necessarily begin at the spreadsheet's respective
-		(0,0) position, but instead start at the earliest x and y, and end at the
-		latest x and y.  The rows are of equal length and position relative to their
-		own origin point, however.  If exact indices are desired, use cells().
+		Note that the rows do not necessarily begin at the spreadsheet's
+		respective (0,0) position, but instead start at the earliest x and
+		y, and end at the latest x and y.  The rows are of equal length and
+		position relative to their own origin point, however.  If exact
+		indices are desired, use cells().
 		'''
 		yt = {}
 		minx = (1<<32) # arbitrary max value
@@ -41,7 +57,7 @@ class XLSFile:
 		for y in yt:
 			row = [''] * (maxx-minx+1)
 			for x in yt[y]:
-				row[x] = yt[y][x]
+				row[x-minx] = yt[y][x]
 			yield row
 	
 	def cells(self,sheet):
