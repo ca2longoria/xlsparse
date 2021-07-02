@@ -171,8 +171,8 @@ if __name__ == '__main__':
 		usage('\nERROR: second arg (sheet) must be an integer')
 		exit(1)
 	except Exception as e:
+		usage('Exception')
 		raise e
-		exit(1)
 	
 	# Parse target file.
 	xf = XLSFile(target)
