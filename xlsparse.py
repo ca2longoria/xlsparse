@@ -11,9 +11,9 @@ def _cell(s):
 	x = 0
 	for c in a:
 		x *= 26 # length of alphabet
-		x += ord(c) - ord('A')
+		x += ord(c) - ord('A') + 1
 	# return (x,y) tuple for position.
-	return (x,int(b)-1) # b-1 for zero-index position
+	return (x-1,int(b)-1) # x-1, b-1 for zero-index position
 
 class XLSFile:
 	'''
@@ -95,12 +95,18 @@ class XLSFile:
 						# Get pos from cell address.
 						pos = _cell(c.attrib['r'])
 						# Pull value from <v> node within <c>, based on cell type.
-						t = c.attrib['t']
-						val = c.find('.//%sv' % (namespace,)).text
-						if t == 's':
-							# String reference, so pull from vals.
-							val = ''.join(vals[int(val)])
-						table[pos] = val
+						t = _dget(c.attrib,'t')
+						vn = c.find('.//%sv' % (namespace,))
+						if vn is not None:
+							val = vn.text
+							if t == 's':
+								# String reference, so pull from vals.
+								val = ''.join(vals[int(val)])
+								# Deal with newline chars.
+								val = re.sub(r'\r?\n','^',val)
+							table[pos] = val
+						else:
+							table[pos] = ''
 						count = count + 1
 					return count
 				# Run against nodes without namespace, then with if that doesn't work.
