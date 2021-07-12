@@ -138,7 +138,8 @@ if __name__ == '__main__':
 			'  -c,--csv   csv with quotes where commas are included in the value',
 			'  -p,--pipe  pipe-delimited fields, no special character handling',
 			'  -t,--tab   tab-delimited fields, no special characters',
-			'  -s <s>,--sep <s>  delimit with contents of <s>',
+			'  -s <s>,--sep <s>     delimit with contents of <s>',
+			'  -d <s>,--decode <s>  encoding to decode with',
 			'',
 			'other args:',
 			'  -h,--help  output usage',
@@ -147,7 +148,7 @@ if __name__ == '__main__':
 	
 	# Couple assertions.
 	try:
-		assert 2 < len(sys.argv) <= 5
+		assert 2 < len(sys.argv) <= 6
 	except AssertionError as e:
 		usage()
 		exit(1)
@@ -158,6 +159,8 @@ if __name__ == '__main__':
 		sheet = int(sys.argv[2])
 		outtype = 'csv'
 		delim = ','
+		decode = 'utf-8'
+		# These are one-or-the-other.
 		if   arg('-c') or arg('--csv'):
 			outttype = 'csv'
 			delim = ','
@@ -170,7 +173,10 @@ if __name__ == '__main__':
 		elif arg('-s') or arg('--sep'):
 			outtype = 'sep'
 			delim = arg2('-s') or arg2('--sep')
-		elif arg('-h') or arg('--help'):
+		# These can be anywhere.
+		if arg('-d') or arg('--decode'):
+			decode = arg2('-d') or arg2('--decode')
+		if arg('-h') or arg('--help'):
 			usage()
 			exit(0)
 	except ValueError:
@@ -179,7 +185,7 @@ if __name__ == '__main__':
 	except Exception as e:
 		usage('Exception')
 		raise e
-	
+
 	# Parse target file.
 	xf = XLSFile(target)
 	for r in xf.rows(int(sheet)):
@@ -193,6 +199,8 @@ if __name__ == '__main__':
 		try:
 			print(delim.join(r))
 		except UnicodeEncodeError:
-			print(delim.join(map(lambda s:s.encode('utf-8'),r)))
+			# NOTE: Running into decode errors again, will have to re-implement that
+			#   backwards strack trace parsing method for the decode(...) param.
+			print(delim.join(map(lambda s:s.encode('utf-8').decode(decode),r)))
 	
 
