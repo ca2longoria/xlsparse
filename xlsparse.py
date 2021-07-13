@@ -185,7 +185,7 @@ if __name__ == '__main__':
 	except Exception as e:
 		usage('Exception')
 		raise e
-
+	
 	# Parse target file.
 	xf = XLSFile(target)
 	for r in xf.rows(int(sheet)):
@@ -202,5 +202,4 @@ if __name__ == '__main__':
 			# NOTE: Running into decode errors again, will have to re-implement that
 			#   backwards strack trace parsing method for the decode(...) param.
 			print(delim.join(map(lambda s:s.encode('utf-8').decode(decode),r)))
-	
 
