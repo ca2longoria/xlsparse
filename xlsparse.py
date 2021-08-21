@@ -140,6 +140,7 @@ if __name__ == '__main__':
 			'  -t,--tab   tab-delimited fields, no special characters',
 			'  -s <s>,--sep <s>     delimit with contents of <s>',
 			'  -d <s>,--decode <s>  encoding to decode with',
+			'  -o <s>,--output <s>  file to write to instead of stdout',
 			'',
 			'other args:',
 			'  -h,--help  output usage',
@@ -160,6 +161,7 @@ if __name__ == '__main__':
 		outtype = 'csv'
 		delim = ','
 		decode = 'utf-8'
+		output = sys.stdout
 		# These are one-or-the-other.
 		if   arg('-c') or arg('--csv'):
 			outttype = 'csv'
@@ -176,6 +178,8 @@ if __name__ == '__main__':
 		# These can be anywhere.
 		if arg('-d') or arg('--decode'):
 			decode = arg2('-d') or arg2('--decode')
+		if arg('-o') or arg('--output'):
+			output = arg2('-o') or arg2('--output')
 		if arg('-h') or arg('--help'):
 			usage()
 			exit(0)
@@ -186,20 +190,29 @@ if __name__ == '__main__':
 		usage('Exception')
 		raise e
 	
+	# Set up output file.
+	if type(output) is str:
+		output = open(output,'w')
+
 	# Parse target file.
 	xf = XLSFile(target)
 	for r in xf.rows(int(sheet)):
 		if outtype == 'csv':
 			# In case of delims (,) within strings, enquote that particular value.
 			def enquote(s):
+				s = s if s is not None else '[:None:]'
 				return ('"%s"' % (
 					re.sub(r'"','\\"',s),) # escape quote chars if inserting quotes.
 				) if delim in s else s
 			r = list(map(enquote,r))
+		r = list(map(lambda a:a if a is not None else '[:None:]',r))
 		try:
-			print(delim.join(r))
+			print(delim.join(r),file=output)
+		except TypeError as e:
+			print('ERROR:',e,'r:',r,file=sys.stderr)
 		except UnicodeEncodeError:
 			# NOTE: Running into decode errors again, will have to re-implement that
 			#   backwards strack trace parsing method for the decode(...) param.
-			print(delim.join(map(lambda s:s.encode('utf-8').decode(decode),r)))
+			print(delim.join(map(lambda s:s.encode('utf-8').decode(decode),r)),
+				file=output)
 
