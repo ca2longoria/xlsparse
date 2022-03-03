@@ -1,3 +1,4 @@
+#!/bin/env python
 
 import re
 import zipfile
@@ -181,6 +182,7 @@ if __name__ == '__main__':
 			usage()
 			exit(0)
 	except ValueError:
+		print(sys.argv)
 		usage('\nERROR: second arg (sheet) must be an integer')
 		exit(1)
 	except Exception as e:
