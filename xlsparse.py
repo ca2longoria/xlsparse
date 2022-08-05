@@ -66,57 +66,60 @@ class XLSFile:
 		'''
 		Iterate through sheet cells.
 		'''
-		with zipfile.ZipFile(self.target,'r') as z:
-			# Get shared strings list/table, for reference in next part.
-			vals = []
-			with z.open('xl/sharedStrings.xml') as f:
-				root = ET.parse(f).getroot()
-				# Get namesapce, which need be included in .findall()s.
-				namespace = re.sub(r'^({[^}]+})?.*',r'\1',root.tag)
-				def findem(ns=''):
-					# Iter through <si> nodes, adding values of <t> children.
-					query = './/%ssi' % (ns,)
-					for n in root.findall(query):
-						r = list(map(lambda n:n.text, n.findall('.//%st' % (ns,))))
-						vals.append(r)
-					return len(vals)
-				# Run against nodes without namespace, then with if that doesn't work.
-				v = findem()
-				if not v:
-					findem(namespace)
-			
-			# Fill cell table with literal values or values dereferenced from vals.
-			table = {}
-			with z.open('xl/worksheets/sheet%i.xml' % (sheet,)) as f:
-				root = ET.parse(f).getroot()
-				# Get namesapce, again (though note there are two namespaces...?)
-				namespace = re.sub(r'^({[^}]+})?.*',r'\1',root.tag)
-				def findem(ns=''):
-					count = 0
-					for c in root.findall('.//%sc' % (ns,)):
-						# Get pos from cell address.
-						pos = _cell(c.attrib['r'])
-						# Pull value from <v> node within <c>, based on cell type.
-						t = _dget(c.attrib,'t')
-						vn = c.find('.//%sv' % (namespace,))
-						if vn is not None:
-							val = vn.text
-							if t == 's':
-								# String reference, so pull from vals.
-								val = ''.join(vals[int(val)])
-								# Deal with newline chars.
-								val = re.sub(r'\r?\n','^',val)
-							table[pos] = val
-						else:
-							table[pos] = ''
-						count = count + 1
-					return count
-				# Run against nodes without namespace, then with if that doesn't work.
-				v = findem()
-				if not v:
-					findem(namespace)
-		for r in table.items():
-			yield r
+		try:
+			with zipfile.ZipFile(self.target,'r') as z:
+				# Get shared strings list/table, for reference in next part.
+				vals = []
+				with z.open('xl/sharedStrings.xml') as f:
+					root = ET.parse(f).getroot()
+					# Get namesapce, which need be included in .findall()s.
+					namespace = re.sub(r'^({[^}]+})?.*',r'\1',root.tag)
+					def findem(ns=''):
+						# Iter through <si> nodes, adding values of <t> children.
+						query = './/%ssi' % (ns,)
+						for n in root.findall(query):
+							r = list(map(lambda n:n.text, n.findall('.//%st' % (ns,))))
+							vals.append(r)
+						return len(vals)
+					# Run against nodes without namespace, then with if that doesn't work.
+					v = findem()
+					if not v:
+						findem(namespace)
+				
+				# Fill cell table with literal values or values dereferenced from vals.
+				table = {}
+				with z.open('xl/worksheets/sheet%i.xml' % (sheet,)) as f:
+					root = ET.parse(f).getroot()
+					# Get namesapce, again (though note there are two namespaces...?)
+					namespace = re.sub(r'^({[^}]+})?.*',r'\1',root.tag)
+					def findem(ns=''):
+						count = 0
+						for c in root.findall('.//%sc' % (ns,)):
+							# Get pos from cell address.
+							pos = _cell(c.attrib['r'])
+							# Pull value from <v> node within <c>, based on cell type.
+							t = _dget(c.attrib,'t')
+							vn = c.find('.//%sv' % (namespace,))
+							if vn is not None:
+								val = vn.text
+								if t == 's':
+									# String reference, so pull from vals.
+									val = ''.join(vals[int(val)])
+									# Deal with newline chars.
+									val = re.sub(r'\r?\n','^',val)
+								table[pos] = val
+							else:
+								table[pos] = ''
+							count = count + 1
+						return count
+					# Run against nodes without namespace, then with if that doesn't work.
+					v = findem()
+					if not v:
+						findem(namespace)
+			for r in table.items():
+				yield r
+		except zipfile.BadZipFile as e:
+			print('ERROR: %s\ntarget (%s)' % (e,self.target),file=open('zipfile.err','a'))
 
 if __name__ == '__main__':
 	import sys
@@ -157,8 +160,14 @@ if __name__ == '__main__':
 	
 	# Interpret arguments.
 	try:
-		target = sys.argv[1]
-		sheet = int(sys.argv[2])
+		# Find first arg (with xlsparse.py).
+		x = 0
+		for _ in range(len(sys.argv)-2):
+			if 'xlsparse.py' in sys.argv[x]:
+				break
+			x += 1
+		target = sys.argv[x+1]
+		sheet = int(sys.argv[x+2])
 		outtype = 'csv'
 		delim = ','
 		decode = 'utf-8'
